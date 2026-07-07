@@ -1,0 +1,6 @@
+# Faster incremental builds on macOS via the LLD linker (installed with
+# `brew install lld`). Linking dominates Bevy rebuild time, so this is the
+# single biggest dev-loop win. `mold` does not support macOS, and the Cranelift
+# codegen backend still crashes Bevy apps on macOS as of mid-2026.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=/opt/homebrew/opt/lld/bin/ld64.lld"]

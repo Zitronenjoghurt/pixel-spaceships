@@ -1,0 +1,17 @@
+[package]
+name = "pixel-spaceships-app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+bevy = { workspace = true }
+bevy_egui = { workspace = true }
+bevy_embedded_assets = { workspace = true }
+egui-phosphor = { workspace = true }
+pixel-spaceships-core = { workspace = true }
+
+[features]
+dev = ["bevy/dynamic_linking"]

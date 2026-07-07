@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-13
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Install Bevy Linux dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev
+
+      - name: Install LLD (referenced by .cargo/config.toml for aarch64-apple-darwin)
+        if: matrix.target == 'aarch64-apple-darwin'
+        run: brew install lld
+
+      - name: Build
+        run: cargo build --release -p pixel-spaceships-app --target ${{ matrix.target }}
+
+      - name: Package
+        shell: bash
+        run: |
+          ARCHIVE="pixel-spaceships-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir "$ARCHIVE"
+          cp LICENSE README.md "$ARCHIVE"/
+          if [[ "${{ matrix.target }}" == *windows* ]]; then
+            cp "target/${{ matrix.target }}/release/pixel-spaceships-app.exe" "$ARCHIVE/pixel-spaceships.exe"
+            7z a "$ARCHIVE.zip" "$ARCHIVE"
+            echo "ARCHIVE_FILE=$ARCHIVE.zip" >> "$GITHUB_ENV"
+          else
+            cp "target/${{ matrix.target }}/release/pixel-spaceships-app" "$ARCHIVE/pixel-spaceships"
+            tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+            echo "ARCHIVE_FILE=$ARCHIVE.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: ${{ env.ARCHIVE_FILE }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.ARCHIVE_FILE }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt
+
+      - uses: softprops/action-gh-release@v3
+        with:
+          draft: true
+          files: dist/*
+          body: |
+            Download the archive for your platform, extract it, and run the `pixel-spaceships` executable.
+
+            **Linux:** the binary links Bevy's audio/input libraries at runtime, install them with `sudo apt-get install libasound2 libudev1` (or your distro's equivalent) if they're missing.
+
+            **macOS:** browser downloads are quarantined by Gatekeeper. Run it once, then allow it under System Settings → Privacy & Security → "Open Anyway". Alternatively, clear the flag after extracting (`xattr -d com.apple.quarantine pixel-spaceships`) or download with `curl -LO <url>` in the first place.
+
+            **Windows:** SmartScreen may warn because the binary is not code-signed. Verify the checksum below, then choose "More info" → "Run anyway".
+
+            **Verify downloads:** `sha256sum -c SHA256SUMS.txt --ignore-missing` or check the build provenance of any file with `gh attestation verify <file> --repo ${{ github.repository }}`.
