@@ -1,34 +1,38 @@
+use crate::color::Color;
 use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
-pub enum ModuleKind {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, EnumIter)]
+pub enum ShipModuleKind {
     #[default]
     Hull,
     Thruster,
     Reactor,
 }
 
-impl ModuleKind {
-    pub const ALL: [ModuleKind; 3] = [ModuleKind::Hull, ModuleKind::Thruster, ModuleKind::Reactor];
-
-    pub fn def(self) -> ModuleDef {
+// Module colors loosely follow this palette: https://lospec.com/palette-list/endesga-32
+impl ShipModuleKind {
+    pub fn def(self) -> ShipModuleDef {
         match self {
-            ModuleKind::Hull => ModuleDef {
+            ShipModuleKind::Hull => ShipModuleDef {
                 kind: self,
                 name: "Hull",
+                color: Color::rgb_hex(0x8B9BB4),
                 mass: 1.0,
                 ..Default::default()
             },
-            ModuleKind::Thruster => ModuleDef {
+            ShipModuleKind::Thruster => ShipModuleDef {
                 kind: self,
                 name: "Thruster",
+                color: Color::rgb_hex(0xF77622),
                 mass: 2.0,
                 power: -5.0,
                 thrust: 10.0,
             },
-            ModuleKind::Reactor => ModuleDef {
+            ShipModuleKind::Reactor => ShipModuleDef {
                 kind: self,
                 name: "Reactor",
+                color: Color::rgb_hex(0x3E8948),
                 mass: 4.0,
                 power: 20.0,
                 ..Default::default()
@@ -38,9 +42,10 @@ impl ModuleKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
-pub struct ModuleDef {
-    pub kind: ModuleKind,
+pub struct ShipModuleDef {
+    pub kind: ShipModuleKind,
     pub name: &'static str,
+    pub color: Color,
     pub mass: f32,
     pub power: f32,
     pub thrust: f32,

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use pixel_spaceships_core::Ship;
+use pixel_spaceships_core::ship::Ship;
 
 pub struct GamePlugin;
 

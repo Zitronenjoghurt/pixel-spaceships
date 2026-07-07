@@ -1,6 +1,3 @@
-pub mod module;
+mod color;
+pub mod direction;
 pub mod ship;
-
-pub use glam::IVec2;
-pub use module::{ModuleDef, ModuleKind};
-pub use ship::{Cell, Ship};

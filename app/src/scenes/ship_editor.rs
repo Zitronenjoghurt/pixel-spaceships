@@ -4,7 +4,7 @@ use crate::widgets::{ModulePalette, ShipStats, TitleTag, viewport_root};
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
 use egui_phosphor::regular;
-use pixel_spaceships_core::ModuleKind;
+use pixel_spaceships_core::ship::module::ShipModuleKind;
 
 pub struct ShipEditorPlugin;
 
@@ -21,7 +21,7 @@ impl Plugin for ShipEditorPlugin {
 }
 
 #[derive(Resource, Default)]
-struct SelectedModule(ModuleKind);
+struct SelectedModule(ShipModuleKind);
 
 fn setup_editor(mut commands: Commands) {
     commands.spawn((Name::new("EditorRoot"), DespawnOnExit(AppState::ShipEditor)));
@@ -36,8 +36,6 @@ fn editor_ui(
     mut next_app: ResMut<NextState<AppState>>,
 ) -> Result {
     let ctx = contexts.ctx_mut()?;
-    // One root Ui for the whole scene: the top bar and both side panels lay out
-    // against each other, so nothing overlaps.
     let mut root = viewport_root(ctx, "ship_editor");
 
     egui::Panel::top("editor_top").show(&mut root, |ui| {

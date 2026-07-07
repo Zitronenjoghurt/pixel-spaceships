@@ -10,13 +10,14 @@ license = "MIT"
 repository = "https://github.com/Zitronenjoghurt/pixel-spaceships"
 
 [workspace.dependencies]
+pixel-spaceships-core = { path = "core" }
 bevy = "0.19"
 bevy_egui = "0.41"
 bevy_embedded_assets = "0.16"
-serde = { version = "1", features = ["derive"] }
-glam = { version = "0.32", features = ["serde"] }
 egui-phosphor = { git = "https://github.com/Zitronenjoghurt/egui-phosphor.git", rev = "573b1ff1ee655c0a5eab77d7733d4ae66a2cd570", default-features = false, features = ["regular"] }
-pixel-spaceships-core = { path = "core" }
+glam = { version = "0.32", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+strum = { version = "0.28.0", features = ["derive"] }
 
 [profile.dev]
 opt-level = 1
