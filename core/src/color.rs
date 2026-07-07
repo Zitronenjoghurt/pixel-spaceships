@@ -19,4 +19,8 @@ impl Color {
             (value & 0xFF) as u8,
         )
     }
+
+    pub const fn to_rgba(self) -> [u8; 4] {
+        self.0
+    }
 }

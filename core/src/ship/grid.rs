@@ -1,8 +1,9 @@
 use crate::direction::Direction;
 use crate::ship::cell::ShipCell;
 use crate::ship::module::ShipModuleKind;
+use crate::ship::raster::Raster;
 use crate::ship::thrust::ThrustPort;
-use glam::{IVec2, Vec2};
+use glam::{IVec2, UVec2, Vec2};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -66,6 +67,34 @@ impl ShipGrid {
             .sum()
     }
 
+    /// Rasterizes the cells within `[origin, origin + size)` into an RGBA8 [`Raster`].
+    /// Cells outside the region are ignored; empty cells stay transparent.
+    pub fn rasterize(&self, origin: IVec2, size: UVec2) -> Raster {
+        let mut raster = Raster::new(origin, size);
+        for (pos, cell) in &self.0 {
+            let local = *pos - origin;
+            if local.x < 0 || local.y < 0 || local.x as u32 >= size.x || local.y as u32 >= size.y {
+                continue;
+            }
+            let row = size.y - 1 - local.y as u32;
+            let idx = ((row * size.x + local.x as u32) * 4) as usize;
+            raster.pixels[idx..idx + 4].copy_from_slice(&cell.kind.def().color.to_rgba());
+        }
+        raster
+    }
+
+    /// The tight `(origin, size)` covering every cell, or `None` when the grid is empty.
+    pub fn bounds(&self) -> Option<(IVec2, UVec2)> {
+        let mut keys = self.0.keys();
+        let first = *keys.next()?;
+        let (mut min, mut max) = (first, first);
+        for pos in keys {
+            min = min.min(*pos);
+            max = max.max(*pos);
+        }
+        Some((min, (max - min + IVec2::ONE).as_uvec2()))
+    }
+
     pub fn thruster_ports(&self, center_of_mass: Vec2) -> Vec<ThrustPort> {
         let mut ports = Vec::new();
         for (pos, cell) in &self.0 {
@@ -87,5 +116,49 @@ impl ShipGrid {
             }
         }
         ports
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rasterize_writes_module_color() {
+        let mut grid = ShipGrid::default();
+        grid.place(IVec2::ZERO, ShipModuleKind::Reactor);
+        let raster = grid.rasterize(IVec2::ZERO, UVec2::new(1, 1));
+        assert_eq!(raster.pixels, ShipModuleKind::Reactor.def().color.to_rgba());
+    }
+
+    #[test]
+    fn rasterize_flips_y_so_higher_cells_land_in_higher_rows() {
+        let mut grid = ShipGrid::default();
+        grid.place(IVec2::new(0, 1), ShipModuleKind::Hull); // top cell
+        let raster = grid.rasterize(IVec2::ZERO, UVec2::new(1, 2));
+        let hull = ShipModuleKind::Hull.def().color.to_rgba();
+        assert_eq!(raster.pixels[0..4].to_vec(), hull.to_vec()); // top row filled
+        assert_eq!(raster.pixels[4..8].to_vec(), vec![0, 0, 0, 0]); // bottom row empty
+    }
+
+    #[test]
+    fn rasterize_ignores_cells_outside_the_region() {
+        let mut grid = ShipGrid::default();
+        grid.place(IVec2::new(9, 9), ShipModuleKind::Hull);
+        let raster = grid.rasterize(IVec2::ZERO, UVec2::new(2, 2));
+        assert!(raster.pixels.iter().all(|&b| b == 0));
+    }
+
+    #[test]
+    fn bounds_covers_every_cell() {
+        let mut grid = ShipGrid::default();
+        grid.place(IVec2::new(-1, 2), ShipModuleKind::Hull);
+        grid.place(IVec2::new(3, -4), ShipModuleKind::Hull);
+        assert_eq!(grid.bounds(), Some((IVec2::new(-1, -4), UVec2::new(5, 7))));
+    }
+
+    #[test]
+    fn bounds_is_none_when_empty() {
+        assert_eq!(ShipGrid::default().bounds(), None);
     }
 }

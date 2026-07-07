@@ -1,9 +1,11 @@
 use bevy_egui::egui;
 pub use module_palette::ModulePalette;
+pub use ship_canvas::ShipCanvas;
 pub use ship_stats::ShipStats;
 pub use title_tag::TitleTag;
 
 mod module_palette;
+mod ship_canvas;
 mod ship_stats;
 mod title_tag;
 

@@ -1,9 +1,11 @@
-use glam::IVec2;
+use crate::ship::raster::Raster;
+use glam::{IVec2, UVec2};
 use serde::{Deserialize, Serialize};
 
 pub mod cell;
 mod grid;
 pub mod module;
+pub mod raster;
 pub mod stats;
 pub mod thrust;
 
@@ -25,7 +27,19 @@ impl Ship {
     }
 
     pub fn remove(&mut self, at: IVec2) -> Option<cell::ShipCell> {
-        self.grid.remove(at)
+        let removed = self.grid.remove(at);
+        if removed.is_some() {
+            self.recompute_stats();
+        }
+        removed
+    }
+
+    pub fn rasterize(&self, origin: IVec2, size: UVec2) -> Raster {
+        self.grid.rasterize(origin, size)
+    }
+
+    pub fn bounds(&self) -> Option<(IVec2, UVec2)> {
+        self.grid.bounds()
     }
 
     fn recompute_stats(&mut self) {

@@ -20,7 +20,6 @@ fn menu_ui(mut contexts: EguiContexts, mut next: ResMut<NextState<AppState>>) ->
     let ctx = contexts.ctx_mut()?;
     let mut root = viewport_root(ctx, "main_menu");
 
-    // Top bar + central content share one root Ui, so they lay out together.
     egui::Panel::top("menu_top").show(&mut root, |ui| {
         ui.horizontal(|ui| ui.add(TitleTag));
     });

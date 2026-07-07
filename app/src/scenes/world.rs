@@ -19,7 +19,6 @@ fn world_hud(mut contexts: EguiContexts, mut next: ResMut<NextState<AppState>>) 
     let ctx = contexts.ctx_mut()?;
     let mut root = viewport_root(ctx, "world");
 
-    // Top bar only; the flight scene renders through the area below it.
     egui::Panel::top("world_top").show(&mut root, |ui| {
         ui.horizontal(|ui| {
             ui.add(TitleTag);
