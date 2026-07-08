@@ -1,8 +1,10 @@
+use crate::config::Modules;
 use crate::ship::raster::Raster;
 use glam::{IVec2, UVec2};
 use serde::{Deserialize, Serialize};
 
 pub mod cell;
+pub mod flight;
 mod grid;
 pub mod module;
 pub mod raster;
@@ -21,28 +23,28 @@ impl Ship {
         Self::default()
     }
 
-    pub fn place(&mut self, at: IVec2, kind: module::ShipModuleKind) {
+    pub fn place(&mut self, at: IVec2, kind: module::ShipModuleKind, modules: &Modules) {
         self.grid.place(at, kind);
-        self.recompute_stats();
+        self.recompute_stats(modules);
     }
 
-    pub fn remove(&mut self, at: IVec2) -> Option<cell::ShipCell> {
+    pub fn remove(&mut self, at: IVec2, modules: &Modules) -> Option<cell::ShipCell> {
         let removed = self.grid.remove(at);
         if removed.is_some() {
-            self.recompute_stats();
+            self.recompute_stats(modules);
         }
         removed
     }
 
-    pub fn rasterize(&self, origin: IVec2, size: UVec2) -> Raster {
-        self.grid.rasterize(origin, size)
+    pub fn rasterize(&self, origin: IVec2, size: UVec2, modules: &Modules) -> Raster {
+        self.grid.rasterize(origin, size, modules)
     }
 
     pub fn bounds(&self) -> Option<(IVec2, UVec2)> {
         self.grid.bounds()
     }
 
-    fn recompute_stats(&mut self) {
-        self.stats = stats::ShipStats::compute(&self.grid);
+    fn recompute_stats(&mut self, modules: &Modules) {
+        self.stats = stats::ShipStats::compute(&self.grid, modules);
     }
 }

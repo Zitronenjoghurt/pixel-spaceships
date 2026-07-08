@@ -1,3 +1,4 @@
+use crate::plugins::GameConfig;
 use crate::state::AppState;
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, egui};
@@ -15,14 +16,12 @@ impl Plugin for SplashPlugin {
     }
 }
 
-const SPLASH_SECS: f32 = 0.0;
-
 #[derive(Resource)]
 struct SplashTimer(Timer);
 
-fn setup(mut commands: Commands, mut clear: ResMut<ClearColor>) {
+fn setup(mut commands: Commands, config: Res<GameConfig>, mut clear: ResMut<ClearColor>) {
     commands.insert_resource(SplashTimer(Timer::from_seconds(
-        SPLASH_SECS,
+        config.splash.secs,
         TimerMode::Once,
     )));
     clear.0 = Color::BLACK;

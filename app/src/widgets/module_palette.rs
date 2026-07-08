@@ -18,7 +18,7 @@ impl Widget for ModulePalette<'_> {
             ui.heading("Modules");
             for kind in ShipModuleKind::iter() {
                 let selected = *self.selected == kind;
-                if ui.selectable_label(selected, kind.def().name).clicked() {
+                if ui.selectable_label(selected, kind.name()).clicked() {
                     *self.selected = kind;
                 }
             }

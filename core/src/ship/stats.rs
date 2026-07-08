@@ -1,3 +1,4 @@
+use crate::config::Modules;
 use crate::ship::grid::ShipGrid;
 use crate::ship::thrust::ShipThrust;
 
@@ -12,15 +13,15 @@ pub struct ShipStats {
 }
 
 impl ShipStats {
-    pub fn compute(grid: &ShipGrid) -> Self {
-        let center_of_mass = grid.center_of_mass();
-        let thrust_ports = grid.thruster_ports(center_of_mass);
+    pub fn compute(grid: &ShipGrid, modules: &Modules) -> Self {
+        let center_of_mass = grid.center_of_mass(modules);
+        let thrust_ports = grid.thruster_ports(center_of_mass, modules);
         Self {
             center_of_mass,
-            moment_of_inertia: grid.moment_of_inertia(center_of_mass),
-            power_balance: grid.power_balance(),
+            moment_of_inertia: grid.moment_of_inertia(center_of_mass, modules),
+            power_balance: grid.power_balance(modules),
             thrust: ShipThrust::from_ports(&thrust_ports),
-            total_mass: grid.total_mass(),
+            total_mass: grid.total_mass(modules),
         }
     }
 }

@@ -6,7 +6,7 @@ mod widgets;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 
-use plugins::{CameraPlugin, GamePlugin, ThemePlugin};
+use plugins::{CameraPlugin, GamePlugin, StarfieldPlugin, ThemePlugin};
 use scenes::{MainMenuPlugin, ShipEditorPlugin, SplashPlugin, WorldPlugin};
 use state::AppState;
 
@@ -31,7 +31,7 @@ fn main() {
     )
     .add_plugins(EguiPlugin::default())
     .init_state::<AppState>()
-    .add_plugins((CameraPlugin, GamePlugin, ThemePlugin))
+    .add_plugins((CameraPlugin, GamePlugin, StarfieldPlugin, ThemePlugin))
     .add_plugins((SplashPlugin, MainMenuPlugin, ShipEditorPlugin, WorldPlugin))
     .run();
 }

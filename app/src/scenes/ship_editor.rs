@@ -1,4 +1,4 @@
-use crate::plugins::ActiveShip;
+use crate::plugins::{ActiveShip, GameConfig};
 use crate::state::{AppState, EditorTool};
 use crate::widgets::{ModulePalette, ShipCanvas, ShipStats, TitleTag, viewport_root};
 use bevy::asset::RenderAssetUsages;
@@ -8,10 +8,6 @@ use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy_egui::{EguiContexts, EguiPrimaryContextPass, EguiTextureHandle, egui};
 use egui_phosphor::regular;
 use pixel_spaceships_core::ship::module::ShipModuleKind;
-
-/// Fixed editing canvas: a stable region so click -> cell is a constant transform.
-const CANVAS_ORIGIN: IVec2 = IVec2::new(-32, -32);
-const CANVAS_SIZE: UVec2 = UVec2::new(64, 64);
 
 pub struct ShipEditorPlugin;
 
@@ -47,12 +43,14 @@ fn setup_editor(
     mut commands: Commands,
     mut images: ResMut<Assets<Image>>,
     mut contexts: EguiContexts,
+    config: Res<GameConfig>,
     ship: Res<ActiveShip>,
 ) {
+    let size = config.editor.canvas_size;
     let mut image = Image::new_fill(
         Extent3d {
-            width: CANVAS_SIZE.x,
-            height: CANVAS_SIZE.y,
+            width: size.x,
+            height: size.y,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -61,7 +59,11 @@ fn setup_editor(
         RenderAssetUsages::default(),
     );
     image.sampler = ImageSampler::nearest();
-    image.data = Some(ship.0.rasterize(CANVAS_ORIGIN, CANVAS_SIZE).pixels);
+    image.data = Some(
+        ship.0
+            .rasterize(config.editor.canvas_origin, size, &config.modules)
+            .pixels,
+    );
 
     let image = images.add(image);
     let texture = contexts.add_image(EguiTextureHandle::Strong(image.clone()));
@@ -83,20 +85,27 @@ fn teardown_editor(
 
 fn sync_canvas(
     ship: Res<ActiveShip>,
+    config: Res<GameConfig>,
     canvas: Res<EditorCanvas>,
     mut images: ResMut<Assets<Image>>,
 ) {
     if !ship.is_changed() {
         return;
     }
-    let raster = ship.0.rasterize(CANVAS_ORIGIN, CANVAS_SIZE);
+    let raster = ship.0.rasterize(
+        config.editor.canvas_origin,
+        config.editor.canvas_size,
+        &config.modules,
+    );
     if let Some(mut image) = images.get_mut(&canvas.image) {
         image.data = Some(raster.pixels);
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn editor_ui(
     mut contexts: EguiContexts,
+    config: Res<GameConfig>,
     mut selected: ResMut<SelectedModule>,
     mut ship: ResMut<ActiveShip>,
     canvas: Res<EditorCanvas>,
@@ -156,16 +165,16 @@ fn editor_ui(
         let mut target = None;
         ui.add(ShipCanvas::new(
             canvas.texture,
-            CANVAS_ORIGIN,
-            CANVAS_SIZE,
+            config.editor.canvas_origin,
+            config.editor.canvas_size,
             &mut target,
         ));
 
         if let Some(cell) = target {
             match tool.get() {
-                EditorTool::Place => ship.0.place(cell, selected.0),
+                EditorTool::Place => ship.0.place(cell, selected.0, &config.modules),
                 EditorTool::Erase => {
-                    ship.0.remove(cell);
+                    ship.0.remove(cell, &config.modules);
                 }
                 EditorTool::Inspect => {}
             }
