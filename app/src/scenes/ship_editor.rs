@@ -15,6 +15,8 @@ impl Plugin for ShipEditorPlugin {
     fn build(&self, app: &mut App) {
         app.add_sub_state::<EditorTool>()
             .init_resource::<SelectedModule>()
+            .init_resource::<ShowCenterOfMass>()
+            .init_resource::<ShowCenterOfThrust>()
             .add_systems(OnEnter(AppState::ShipEditor), setup_editor)
             .add_systems(OnExit(AppState::ShipEditor), teardown_editor)
             .add_systems(
@@ -32,6 +34,12 @@ impl Plugin for ShipEditorPlugin {
 
 #[derive(Resource, Default)]
 struct SelectedModule(ShipModuleKind);
+
+#[derive(Resource, Default)]
+struct ShowCenterOfMass(bool);
+
+#[derive(Resource, Default)]
+struct ShowCenterOfThrust(bool);
 
 #[derive(Resource)]
 struct EditorCanvas {
@@ -107,6 +115,8 @@ fn editor_ui(
     mut contexts: EguiContexts,
     config: Res<GameConfig>,
     mut selected: ResMut<SelectedModule>,
+    mut show_com: ResMut<ShowCenterOfMass>,
+    mut show_cot: ResMut<ShowCenterOfThrust>,
     mut ship: ResMut<ActiveShip>,
     canvas: Res<EditorCanvas>,
     tool: Res<State<EditorTool>>,
@@ -152,6 +162,10 @@ fn editor_ui(
             ui.separator();
 
             ui.add(ModulePalette::new(&mut selected.0));
+
+            ui.separator();
+            ui.checkbox(&mut show_com.0, "Center of mass");
+            ui.checkbox(&mut show_cot.0, "Center of thrust");
         });
 
     egui::Panel::right("editor_inspector")
@@ -163,12 +177,18 @@ fn editor_ui(
 
     egui::CentralPanel::default().show(&mut root, |ui| {
         let mut target = None;
-        ui.add(ShipCanvas::new(
-            canvas.texture,
-            config.editor.canvas_origin,
-            config.editor.canvas_size,
-            &mut target,
-        ));
+        let com = show_com.0.then_some(ship.0.stats.center_of_mass);
+        let cot = show_cot.0.then(|| ship.0.stats.center_of_thrust).flatten();
+        ui.add(
+            ShipCanvas::new(
+                canvas.texture,
+                config.editor.canvas_origin,
+                config.editor.canvas_size,
+                &mut target,
+            )
+            .with_center_of_mass(com)
+            .with_center_of_thrust(cot),
+        );
 
         if let Some(cell) = target {
             match tool.get() {

@@ -1,7 +1,7 @@
-use bevy::math::{IVec2, UVec2};
+use bevy::math::{IVec2, UVec2, Vec2 as WorldVec2};
 use bevy_egui::egui::{
-    Color32, Id, PointerButton, Pos2, Rect, Response, Sense, Stroke, StrokeKind, TextureId, Ui,
-    Vec2, Widget, pos2, vec2,
+    Color32, Id, Painter, PointerButton, Pos2, Rect, Response, Sense, Stroke, StrokeKind,
+    TextureId, Ui, Vec2, Widget, pos2, vec2,
 };
 
 const MIN_ZOOM: f32 = 1.0;
@@ -22,6 +22,8 @@ pub struct ShipCanvas<'a> {
     origin: IVec2,
     size: UVec2,
     target: &'a mut Option<IVec2>,
+    center_of_mass: Option<WorldVec2>,
+    center_of_thrust: Option<WorldVec2>,
 }
 
 impl<'a> ShipCanvas<'a> {
@@ -36,7 +38,28 @@ impl<'a> ShipCanvas<'a> {
             origin,
             size,
             target,
+            center_of_mass: None,
+            center_of_thrust: None,
         }
+    }
+
+    pub fn with_center_of_mass(mut self, com: Option<WorldVec2>) -> Self {
+        self.center_of_mass = com;
+        self
+    }
+
+    pub fn with_center_of_thrust(mut self, cot: Option<WorldVec2>) -> Self {
+        self.center_of_thrust = cot;
+        self
+    }
+
+    /// Maps a grid-space point to its pixel center on screen. Grid Y is up, but
+    /// the texture is drawn Y-down, so the vertical axis is flipped.
+    fn grid_to_screen(&self, image: Rect, zoom: f32, p: WorldVec2) -> Pos2 {
+        pos2(
+            image.min.x + (p.x - self.origin.x as f32) * zoom,
+            image.min.y + (self.size.y as f32 - (p.y - self.origin.y as f32)) * zoom,
+        )
     }
 
     fn image_rect(&self, panel: Rect, view: CanvasView) -> Rect {
@@ -135,6 +158,13 @@ impl Widget for ShipCanvas<'_> {
             );
         }
 
+        if let Some(cot) = self.center_of_thrust {
+            draw_thrust_marker(&painter, self.grid_to_screen(image, view.zoom, cot));
+        }
+        if let Some(com) = self.center_of_mass {
+            draw_mass_marker(&painter, self.grid_to_screen(image, view.zoom, com));
+        }
+
         let painting =
             response.is_pointer_button_down_on() && ui.input(|i| i.pointer.primary_down());
         if painting && let Some(pos) = response.interact_pointer_pos() {
@@ -144,4 +174,38 @@ impl Widget for ShipCanvas<'_> {
         ui.data_mut(|d| d.insert_temp(id, view));
         response
     }
+}
+
+fn crosshair(painter: &Painter, c: Pos2, radius: f32, color: Color32) {
+    let reach = radius * 1.7;
+    painter.line_segment(
+        [pos2(c.x - reach, c.y), pos2(c.x + reach, c.y)],
+        Stroke::new(1.0, color),
+    );
+    painter.line_segment(
+        [pos2(c.x, c.y - reach), pos2(c.x, c.y + reach)],
+        Stroke::new(1.0, color),
+    );
+}
+
+fn draw_mass_marker(painter: &Painter, c: Pos2) {
+    let color = Color32::from_rgb(90, 200, 255);
+    let radius = 6.0;
+    painter.circle_stroke(c, radius, Stroke::new(2.0, color));
+    crosshair(painter, c, radius, color);
+}
+
+fn draw_thrust_marker(painter: &Painter, c: Pos2) {
+    let color = Color32::from_rgb(255, 150, 60);
+    let radius = 6.0;
+    let pts = [
+        pos2(c.x, c.y - radius),
+        pos2(c.x + radius, c.y),
+        pos2(c.x, c.y + radius),
+        pos2(c.x - radius, c.y),
+    ];
+    for i in 0..4 {
+        painter.line_segment([pts[i], pts[(i + 1) % 4]], Stroke::new(2.0, color));
+    }
+    crosshair(painter, c, radius, color);
 }

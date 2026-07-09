@@ -57,6 +57,22 @@ impl ShipGrid {
         }
     }
 
+    pub fn center_of_thrust(&self, modules: &Modules) -> Option<Vec2> {
+        let mut weighted = Vec2::ZERO;
+        let mut total = 0.0;
+
+        for (pos, cell) in &self.0 {
+            let thrust = modules.def(cell.kind).thrust;
+            if thrust <= 0.0 {
+                continue;
+            }
+            weighted += (pos.as_vec2() + Vec2::splat(0.5)) * thrust;
+            total += thrust;
+        }
+
+        (total > 0.0).then(|| weighted / total)
+    }
+
     pub fn moment_of_inertia(&self, center_of_mass: Vec2, modules: &Modules) -> f32 {
         self.0
             .iter()
@@ -82,7 +98,6 @@ impl ShipGrid {
         raster
     }
 
-    /// The tight `(origin, size)` covering every cell, or `None` when the grid is empty.
     pub fn bounds(&self) -> Option<(IVec2, UVec2)> {
         let mut keys = self.0.keys();
         let first = *keys.next()?;
@@ -95,8 +110,11 @@ impl ShipGrid {
     }
 
     pub fn thruster_ports(&self, center_of_mass: Vec2, modules: &Modules) -> Vec<ThrustPort> {
+        let mut cells: Vec<(&IVec2, &ShipCell)> = self.0.iter().collect();
+        cells.sort_unstable_by_key(|(pos, _)| (pos.x, pos.y));
+
         let mut ports = Vec::new();
-        for (pos, cell) in &self.0 {
+        for (pos, cell) in cells {
             let thrust = modules.def(cell.kind).thrust;
             if thrust <= 0.0 {
                 continue;
@@ -107,6 +125,7 @@ impl ShipGrid {
                 if self.get(*pos + push.opposite().as_ivec2()).is_none() {
                     let dir = push.as_vec2();
                     ports.push(ThrustPort {
+                        cell: *pos,
                         push,
                         force: dir * thrust,
                         torque: arm.perp_dot(dir) * thrust,
